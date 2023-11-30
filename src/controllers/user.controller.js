@@ -6,7 +6,6 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 
 const registerUser = asyncHandler(async (req, res) => {
   const { username, email, fullName, password } = req.body;
-  console.log(req.body);
   if (
     [fullName, email, username, password].some((feild) => feild?.trim() === '')
   ) {
@@ -21,13 +20,23 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, 'User with username or email already exists');
   }
   const avatarLocaPath = req.files?.avatar[0]?.path;
-  console.log(req.files);
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  // const coverImageLocalPath = req.files?.coverImage[0]?.path;
+
+  let coverImageLocalPath;
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImageLocalPath = req.files.coverImage[0].path;
+  }
+
   if (!avatarLocaPath) {
     throw new ApiError(400, 'Avatar file is required');
   }
 
   const avatar = await uploadOnCloudinary(avatarLocaPath);
+
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
   if (!avatar) {
@@ -35,12 +44,12 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   const user = await User.create({
-    username: username.toLowerCase(),
+    username: username?.toLowerCase(),
     email,
     password,
     fullName,
-    avatar: avatar?.url,
-    coverImage: coverImage?.url || '',
+    avatar: avatar?.secure_url,
+    coverImage: coverImage?.secure_url || '',
   });
   const createdUser = await User.findById(user?._id).select(
     '-password -refreshToken'
